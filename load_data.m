@@ -46,6 +46,39 @@ for i = 1:length
     fclose(fin);
 end
 
+
+my_tr_data_asym_s2 = my_tr_data_asym;
+
+for i = 1:length
+	ins_size = size(my_tr_data_asym_s2(1,i).am,1)-1;
+	%we assert that ins_size is larger than 1, for there is not null tree in the example set
+	temp_matrix = my_tr_data_asym_s2(1,i).am(1:ins_size,1:ins_size);
+	temp_matrix = temp_matrix + temp_matrix*temp_matrix;
+    temp_matrix = (temp_matrix~=0);
+	my_tr_data_asym_s2(1,i).am(1:ins_size,1:ins_size) = temp_matrix;
+	for j = 1:ins_size
+		my_tr_data_asym_s2(1,i).al{j} = find(my_tr_data_asym_s2(1,i).am(j,:)==1);
+	end
+	my_tr_data_asym_s2(1,i).am_o=my_tr_data_asym(1,i).am;
+end
+
+my_tr_data_sym_s2 = my_tr_data_sym;
+
+for i = 1:length
+	ins_size = size(my_tr_data_sym_s2(1,i).am,1)-1;
+	%we assert that ins_size is larger than 1, for there is not null tree in the example set
+	temp_matrix = my_tr_data_sym_s2(1,i).am(1:ins_size,1:ins_size);
+	temp_matrix = temp_matrix + temp_matrix*temp_matrix;
+    temp_matrix = (temp_matrix~=0);
+	my_tr_data_sym_s2(1,i).am(1:ins_size,1:ins_size) = temp_matrix;
+	for j = 1:ins_size
+		my_tr_data_sym_s2(1,i).al{j} = find(my_tr_data_sym_s2(1,i).am(j,:)==1);
+	end
+	my_tr_data_sym_s2(1,i).am_o=my_tr_data_sym(1,i).am;
+end
+
+
+
 % load('/Users/Milannic/Dropbox/project/nlp/data/test_tag.mat')
 % length = size(test_tag,1);
 % my_test_data(1,length) = struct('am',[]);

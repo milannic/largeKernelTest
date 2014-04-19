@@ -37,17 +37,12 @@ cd ..
 
 cd ..
 
-if [ ! -d folds_data ];then
-	mkdir folds_data
+if [ ! -d folds ];then
+	mkdir folds
 fi
 
-if [ ! -d folds_raw ];then
-	mkdir folds_raw
-fi
-
-cd folds_raw
+cd folds
 for i in $(seq 0 ${NOR_FOLDS});
-#for i in $(seq 1);
 	do
 		mkdir fold_${i}
 		cd fold_${i}
@@ -58,41 +53,20 @@ for i in $(seq 0 ${NOR_FOLDS});
 				mv ${i} data
 				mkdir struc_dir
 				python2.7 ./gen_stru.py ${i}
+#				cd struc_dir
+#					for j in $(ls);
+#						do
+#							cd ${j}
+#								cp ./data ./full/data
+#								ant ${PARSE_DIR} -DPREFIX `pwd`
+#								cd full
+#									matlab -nojvm -nodisplay -nosplash -r "run('load_data.m');quit" > ./log
+#								cd ..
+#							cd ..
+#						done
+#				cd ..
 			cd ..
-		cd ..
-	done
-cd ..
-cp -r folds_raw/* folds_data/
-cd folds_data
-for i in $(ls);
-	do
-		cd ${i}
-		cp -r raw_stru/struc_dir/* .
-		rm -r raw_stru
 		cd ..
 	done
 cd ..
 
-cd folds_raw
-for i in $(seq 0 ${NOR_FOLDS});
-#for i in $(seq 1);
-	do
-		cd fold_${i}
-			cd raw_stru
-				cd struc_dir
-					for j in $(ls);
-						do
-							cd ${j}
-								cp ./data ./full/data
-								ant ${PARSE_DIR} -DPREFIX `pwd`
-								pwd
-								cd full
-									matlab -nojvm -nodisplay -nosplash -r "run('load_data.m');quit" > ./log
-								cd ..
-							cd ..
-						done
-				cd ..
-			cd ..
-		cd ..
-	done
-cd ..

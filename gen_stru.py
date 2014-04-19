@@ -90,7 +90,7 @@ for structure in struct_list:
             struct_name = name1
             if s2 =="S2":
                 tree_kernel_name = tree_kernel_name +"_S2"
-                kernel_base_name = kernel_name+"_S2"
+                kernel_base_name = kernel_base_name+"_S2"
                 struct_name = name3 
             #we also calculate sp with PT
             if kernel == "PT":
@@ -106,7 +106,7 @@ for structure in struct_list:
             if kernel == "PT":
                 m_file_dex.write(kernel_name+"="+tree_kernel_name+"("+struct_name+",1,0.4,0.4,0.16,0,0);\n")
             elif kernel == "SST":
-                m_file_dex.write(kernel_name+"="+tree_kernel_name+"("+struct_name+",0,0.4,0.4,0.16,0,0);\n")
+                m_file_dex.write(kernel_name+"="+tree_kernel_name+"("+struct_name+",0,1,0.4,0.4,0,0);\n")
             m_file_dex.write(kernel_name+"=normalizekm("+kernel_name+");\n")
             m_file_dex.write("save(\'"+kernel_name+".mat\',\'"+kernel_name+"\',\'"+kernel_name2+"\');\n")
 

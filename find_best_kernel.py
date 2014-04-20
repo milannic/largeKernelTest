@@ -150,7 +150,7 @@ s2_struct_list = [GR_S2,GRW_S2,PST_S2,SEM1_S2,SEM2_S2,SEM3_S2]
 
 all_struct_list = [GR,GRW,PST,SEM1,SEM2,SEM3,GR_S2,GRW_S2,PST_S2,SEM1_S2,SEM2_S2,SEM3_S2]
 
-all_struct_name = ["GR","GRW","PST","SEM1","SEM2","SEM3","GR_S2","GRW_S2","PST_S2","SEM1_S2","SEM2_S2","SEM3_S2"]
+all_struct_name = ["SEM1_S2","SEM2_S2","SEM3_S2","GR_S2","GRW_S2","PST_S2","SEM1","SEM2","SEM3","GR","GRW","PST"]
 
 
 template="""#PBS -W group_list=yeticcls
@@ -200,7 +200,7 @@ def main():
             with open(dir_prefix+"/"+struct+'/output','w') as record_output:
                 record_output.write(struct+'\n')
 
-            genBash(struct)
+            genBash(struct,original_dir)
             shutil.copyfile(template_dir+'/svm_test.m',dir_prefix+"/"+struct+'/svm_test.m')
             run_m = open(dir_prefix+"/"+struct+'/batch_run.m','w')
             for fold in range(folds):
@@ -209,7 +209,7 @@ def main():
                     run_m.write("load(\'%s.mat\');\n"%(data_dir_prefix+"/fold_"+str(fold)+"/"+struct_dir_dict[struct]+"/full/"+file_name+"_fold_"+str(fold)))
 
             run_m.write("c_values = %s;\n"%(c_values))
-            run_m.write("fid = fopen(\'output\',\'a+\');")
+            run_m.write("fid = fopen(\'output\',\'a+\');\n")
 
             for kernel in kernel_list:
                 run_m.write("%s_precision_full=[];\n"%(kernel_dict[struct][kernel]))
@@ -238,7 +238,8 @@ def main():
             run_m.close()
     else:
         dir_prefix = combination_dir
-        genCombination(options.debug)
+        genCombination(options.debug,folds,combination_dir,best_kernel_dict)
+        genCombination(options.debug,folds,combination_dir_ng,best_kernel_dict_without_graph_kernel)
 
 
 #    global full_path
@@ -259,7 +260,8 @@ def main():
 def genOrignal():
     pass
 
-def genCombination(debug):
+def genCombination(debug,folds,combination_dir,best_kernel_dict):
+    global c_values
     size = len(all_struct_name)
     total_size = 2**size
     print size
@@ -268,6 +270,7 @@ def genCombination(debug):
         os.mkdir(combination_dir)
     if debug:
         total_size = int(total_size*0.02)
+        c_values = "-2:0.1:2"
     for i in range(total_size):
         if i != 0:
             if len(str(bin(i))[2:]) < 12:
@@ -301,7 +304,7 @@ def genCombination(debug):
             with open(combination_dir+'/'+combination_name+'/output','w') as record_output:
                 record_output.write(str(i)+'\n')
                 record_output.write(combination_name+'\n')
-            genBash(combination_name)
+            genBash(combination_name,combination_dir)
             shutil.copyfile(template_dir+'/svm_test.m',combination_dir+'/'+combination_name+'/svm_test.m')
 
             run_m = open(combination_dir+'/'+combination_name+'/batch_run.m','w')
@@ -311,14 +314,19 @@ def genCombination(debug):
                 for struct in load_mat_list:
                     for file_name in struct_file_data_dict[struct]:
                         run_m.write("load(\'%s.mat\');\n"%(data_dir_prefix+"/fold_"+str(fold)+"/"+struct_dir_dict[struct]+"/full/"+file_name+"_fold_"+str(fold)))
-                run_m.write(new_kernel.replace("@","_"+str(fold)))
+                run_m.write(new_kernel.replace("@","_fold_"+str(fold)))
             run_m.write("addpath(\'%s\')\n"%(libsvm_path))
             run_m.write("c_values = %s;\n"%(c_values))
+            run_m.write("fid = fopen(\'output\',\'a+\');\n")
+            run_m.write("new_kernel_precision_full=[];\n")
+            run_m.write("new_kernel_recall_full=[];\n")
+            run_m.write("new_kernel_f_measure_full=[];\n")
             for  fold in range(folds):
-                run_m.write("new_kernel_result_full_fold_%s=svm_test(new_kernel_%s,%s,%s,c_values);\n"%(str(fold),str("tag_fold_"+str(fold)),str("sep_fold_"+str(fold))))
+                run_m.write("new_kernel_result_full_fold_%s=svm_test(new_kernel_fold_%s,%s,%s,c_values);\n"%(str(fold),str(fold),str("tag_fold_"+str(fold)),str("sep_fold_"+str(fold))))
                 run_m.write("new_kernel_precision_full=[new_kernel_precision_full,new_kernel_result_full_fold_%s(:,1)];\n"%(str(fold)))
                 run_m.write("new_kernel_recall_full=[new_kernel_recall_full,new_kernel_result_full_fold_%s(:,2)];\n"%(str(fold)))
                 run_m.write("new_kernel_f_measure_full=[new_kernel_f_measure_full,new_kernel_result_full_fold_%s(:,1)];\n"%(str(fold)))
+                run_m.write("\n")
             run_m.write("new_kernel_mean_precision=mean(new_kernel_precision_full,2);\n")
             run_m.write("new_kernel_mean_recall=mean(new_kernel_recall_full,2);\n")
             run_m.write("new_kernel_mean_f_measure=mean(new_kernel_f_measure_full,2);\n")
@@ -331,14 +339,14 @@ def genCombination(debug):
             run_m.write("new_kernel_result_full=sortrows(new_kernel_result_full,5);\n")
             run_m.write("new_kernel_result=new_kernel_result_full(end,:);\n")
 
-            run_m.write("fprintf(fid,\'%%0.6f %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f \\n\',new_kernel_result.\');\n")
+            run_m.write("fprintf(fid,\' %0.6f %0.6f %0.6f %0.6f %0.6f %0.6f %0.6f \\n\',new_kernel_result.\');\n")
             run_m.write("save(\'./result.mat\');\n")
             run_m.write("fclose(fid);\n")
             run_m.close()
     pass
 
-def genBash(ins):
-    with open('./'+dir_prefix+'/'+ins+'/run.sh','w') as bash_file:
+def genBash(ins,dir_prefix):
+    with open(dir_prefix+'/'+ins+'/run.sh','w') as bash_file:
         bash_file.write("#! /bin/sh\n#directives\n#PBS -N EXP_BEST_KERNEL_%s\n"%(ins))
         bash_file.write(template)
         #bash_file.write("cd "+full_path+'/'+dir_prefix+"/%s\n\n"%(ins))

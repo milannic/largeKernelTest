@@ -14,6 +14,8 @@ data_dir_prefix='../../folds_data'
 tag_dir_prefix='../../tags'
 
 original_dir = "../original"
+#dir without graph kernel
+combination_dir_ng = "../combination_ng"
 combination_dir = "../combination"
 template_dir = "../templates"
 libsvm_path = '../../libsvm'
@@ -95,15 +97,37 @@ best_kernel_dict={}
 best_kernel_dict["GR"] = "GR_PT_4"
 best_kernel_dict["GRW"] = "GRW_PT_4"
 best_kernel_dict["PST"] = "PST_SST_4"
-best_kernel_dict["SEM1"] = "SEM1_PT_4"
+
+best_kernel_dict["SEM1"] = "SEM1_SP"
 best_kernel_dict["SEM2"] = "SEM2_SP"
 best_kernel_dict["SEM3"] = "SEM3_SP"
+
 best_kernel_dict["GR_S2"] = "GR_S2_PT_4"
-best_kernel_dict["PST_S2"] = "PST_S2_SST_4"
+best_kernel_dict["GRW_S2"] = "GRW_S2_SP"
+
+best_kernel_dict["PST_S2"] = "PST_S2_SP"
 best_kernel_dict["SEM1_S2"] = "SEM1_S2_SP" 
 best_kernel_dict["SEM2_S2"] = "SEM2_S2_SP"
 best_kernel_dict["SEM3_S2"] = "SEM3_S2_SP"
-best_kernel_dict["GRW_S2"] = "GRW_S2_SP"
+
+
+#GRW_S2 and PST_S2 only work with Graph Kernel
+best_kernel_dict_without_graph_kernel={}
+
+best_kernel_dict_without_graph_kernel["GR"] = "GR_PT_4"
+best_kernel_dict_without_graph_kernel["GRW"] = "GRW_PT_4"
+best_kernel_dict_without_graph_kernel["PST"] = "PST_SST_4"
+
+best_kernel_dict_without_graph_kernel["SEM1"] = "SEM1_PT_4"
+best_kernel_dict_without_graph_kernel["SEM2"] = "SEM2_PT_4"
+best_kernel_dict_without_graph_kernel["SEM3"] = "SEM3_PT_4"
+
+best_kernel_dict_without_graph_kernel["GR_S2"] = "GR_S2_PT_4"
+best_kernel_dict_without_graph_kernel["GRW_S2"] = "GRW_S2_SP"
+best_kernel_dict_without_graph_kernel["PST_S2"] = "PST_S2_SP"
+best_kernel_dict_without_graph_kernel["SEM1_S2"] = "SEM1_S2_PT_4" 
+best_kernel_dict_without_graph_kernel["SEM2_S2"] = "SEM2_S2_PT_4"
+best_kernel_dict_without_graph_kernel["SEM3_S2"] = "SEM3_S2_PT_4"
 
 
 struct_dir_dict={}
@@ -209,17 +233,6 @@ def main():
 
                 run_m.write("fprintf(fid,\'%s: %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f \\n\',%s_result.\');\n"%(kernel,kernel_dict[struct][kernel]))
 
-#            for line in run_template:
-#                if line=="need_to_be_replace_pt\n":
-#                    run_m.write("pt_result_full=svm_test(%s,struct_tag_full,%s)\n"%(struct_dict[struct]["PT"],str(sep)))
-#                elif line=="need_to_be_replace_sst\n":
-#                    run_m.write("sst_result_full=svm_test(%s,struct_tag_full,%s)\n"%(struct_dict[struct]["SST"],str(sep)))
-#                elif line=="need_to_be_replace_wl\n":
-#                    run_m.write("wl_result_full=svm_test(%s,struct_tag_full,%s)\n"%(struct_dict[struct]["WL"],str(sep)))
-#                elif line=="need_to_be_replace_sp\n":
-#                    run_m.write("sp_result_full=svm_test(%s,struct_tag_full,%s)\n"%(struct_dict[struct]["SP"],str(sep)))
-#                else:
-#                    run_m.write(line)
             run_m.write("save(\'./result.mat\');\n")
             run_m.write("fclose(fid);\n")
             run_m.close()
@@ -247,55 +260,80 @@ def genOrignal():
     pass
 
 def genCombination(debug):
-    size = len(all_kernel_name)
+    size = len(all_struct_name)
     total_size = 2**size
     print size
     print total_size
-    if not os.path.exists(full_path+'/'+combination_dir):
-        os.mkdir(full_path+'/'+combination_dir)
+    if not os.path.exists(combination_dir):
+        os.mkdir(combination_dir)
     if debug:
         total_size = int(total_size*0.02)
     for i in range(total_size):
         if i != 0:
             if len(str(bin(i))[2:]) < 12:
-
                 cur_string = "0"*(12-len(str(bin(i))[2:]))+str(bin(i))[2:]
             else:
                 cur_string =  str(bin(i)[2:])
-            cur = [int(cur_string[i:i+1]) for i in range(0, len(cur_string), 1)]
+            cur = [int(cur_string[j:j+1]) for j in range(0, len(cur_string), 1)]
             weight = sum(cur)
             cur = zip(range(size),cur)
             #print cur
             weight_string = '*(1/%s)'%(weight)
             new_kernel = ''
             combination_name = ''
+            load_mat_list = []
             for ele in cur:
                 if ele[1]:
+                    load_mat_list.append(all_struct_name[ele[0]])
                     if new_kernel:
-                        #new_kernel = new_kernel + '+' +kernel_dict[all_kernel_name[ele[0]]]['PT']+weight_string
-                        new_kernel = new_kernel + '+' +best_kernel_dict[all_kernel_name[ele[0]]]+weight_string
-                        combination_name = combination_name + '_' + all_kernel_name[ele[0]]
+                        new_kernel = new_kernel + '+' +best_kernel_dict[all_struct_name[ele[0]]]+"@"+weight_string
+                        combination_name = combination_name + '_' + all_struct_name[ele[0]]
                     else:
-                        new_kernel = best_kernel_dict[all_kernel_name[ele[0]]]+weight_string
-                        combination_name = all_kernel_name[ele[0]]
+                        new_kernel = best_kernel_dict[all_struct_name[ele[0]]]+"@"+weight_string
+                        combination_name = all_struct_name[ele[0]]
             #print combination_name
-            new_kernel = 'new_kernel=' + new_kernel +";\n"
+            new_kernel = 'new_kernel@=' + new_kernel +";\n"
+                
             #print new_kernel
-            if not os.path.exists(full_path+'/'+combination_dir+'/'+combination_name):
-                os.mkdir(full_path+'/'+combination_dir+'/'+combination_name)
-            with open(full_path+'/'+combination_dir+'/'+combination_name+'/output','w') as record_output:
+            combination_name = str(i)+"_"+combination_name
+            if not os.path.exists(combination_dir+'/'+combination_name):
+                os.mkdir(combination_dir+'/'+combination_name)
+            with open(combination_dir+'/'+combination_name+'/output','w') as record_output:
+                record_output.write(str(i)+'\n')
                 record_output.write(combination_name+'\n')
             genBash(combination_name)
-            shutil.copyfile(full_path+'/'+template_dir+'/svm_test.m',full_path+'/'+combination_dir+'/'+combination_name+'/svm_test.m')
-            run_m = open(full_path+'/'+combination_dir+'/'+combination_name+'/batch_run.m','w')
-            run_m.write("load(\'%s/all_kernel.mat\')\n"%(full_path))
+            shutil.copyfile(template_dir+'/svm_test.m',combination_dir+'/'+combination_name+'/svm_test.m')
+
+            run_m = open(combination_dir+'/'+combination_name+'/batch_run.m','w')
+
+            for fold in range(folds):
+                run_m.write("load(\'%s.mat\');\n"%(tag_dir_prefix+"/"+str(fold)))
+                for struct in load_mat_list:
+                    for file_name in struct_file_data_dict[struct]:
+                        run_m.write("load(\'%s.mat\');\n"%(data_dir_prefix+"/fold_"+str(fold)+"/"+struct_dir_dict[struct]+"/full/"+file_name+"_fold_"+str(fold)))
+                run_m.write(new_kernel.replace("@","_"+str(fold)))
             run_m.write("addpath(\'%s\')\n"%(libsvm_path))
-            run_m.write(new_kernel)
-            run_m.write("result_full=svm_test(new_kernel,struct_tag_full,%s);\n"%(str(sep)))
-            run_template = open(full_path+'/'+template_dir+'/com.m','r')
-            for line in run_template:
-                run_m.write(line)
-            run_template.close()
+            run_m.write("c_values = %s;\n"%(c_values))
+            for  fold in range(folds):
+                run_m.write("new_kernel_result_full_fold_%s=svm_test(new_kernel_%s,%s,%s,c_values);\n"%(str(fold),str("tag_fold_"+str(fold)),str("sep_fold_"+str(fold))))
+                run_m.write("new_kernel_precision_full=[new_kernel_precision_full,new_kernel_result_full_fold_%s(:,1)];\n"%(str(fold)))
+                run_m.write("new_kernel_recall_full=[new_kernel_recall_full,new_kernel_result_full_fold_%s(:,2)];\n"%(str(fold)))
+                run_m.write("new_kernel_f_measure_full=[new_kernel_f_measure_full,new_kernel_result_full_fold_%s(:,1)];\n"%(str(fold)))
+            run_m.write("new_kernel_mean_precision=mean(new_kernel_precision_full,2);\n")
+            run_m.write("new_kernel_mean_recall=mean(new_kernel_recall_full,2);\n")
+            run_m.write("new_kernel_mean_f_measure=mean(new_kernel_f_measure_full,2);\n")
+
+            run_m.write("new_kernel_std_precision=std(new_kernel_precision_full\')\';\n")
+            run_m.write("new_kernel_std_recall=std(new_kernel_recall_full\')\';\n")
+            run_m.write("new_kernel_std_f_measure=std(new_kernel_f_measure_full\')\';\n")
+
+            run_m.write("new_kernel_result_full=[new_kernel_mean_precision,new_kernel_std_precision,new_kernel_mean_recall,new_kernel_std_recall,new_kernel_mean_f_measure,new_kernel_std_f_measure,10.^c_values\'];\n")
+            run_m.write("new_kernel_result_full=sortrows(new_kernel_result_full,5);\n")
+            run_m.write("new_kernel_result=new_kernel_result_full(end,:);\n")
+
+            run_m.write("fprintf(fid,\'%%0.6f %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f %%0.6f \\n\',new_kernel_result.\');\n")
+            run_m.write("save(\'./result.mat\');\n")
+            run_m.write("fclose(fid);\n")
             run_m.close()
     pass
 
